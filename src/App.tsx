@@ -489,6 +489,27 @@ export default function App() {
         const data = await resMetrics.json();
         setMetrics(data);
       }
+
+      const resJobs = await fetch("/api/agents/jobs?limit=30");
+      if (resJobs.ok) {
+        const jobs = await resJobs.json();
+        const formattedJobs = jobs.map((job: any) => {
+          let estimatedTokens = 0;
+          if (job.output) {
+            const outLen = job.output.length;
+            const inLen = job.input ? job.input.length : 0;
+            estimatedTokens = Math.ceil((outLen + inLen) / 3.8);
+          }
+          return {
+            ...job,
+            completedAt: job.completedAt 
+              ? new Date(job.completedAt).toLocaleTimeString() 
+              : new Date(job.createdAt).toLocaleTimeString(),
+            tokensUsed: { total: estimatedTokens || 0 }
+          };
+        });
+        setJobsHistory(formattedJobs);
+      }
     } catch (err) {
       console.error("Error fetching stats:", err);
     }
@@ -498,7 +519,7 @@ export default function App() {
     fetchMetricsAndHistory();
     const interval = setInterval(fetchMetricsAndHistory, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [lang]);
 
   // Update dynamic input field value
   const handleInputChange = (field: string, value: any) => {

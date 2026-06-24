@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 git_push.ts
+git_sync.ts
+git_sync.js

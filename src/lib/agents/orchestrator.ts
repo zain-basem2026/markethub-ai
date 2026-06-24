@@ -649,6 +649,28 @@ export async function getAgentStatus(jobId: string) {
 }
 
 /**
+ * Retrieves the list of recent agent jobs, sorted by creation date.
+ */
+export async function getAgentJobsList(limit: number = 20) {
+  try {
+    const dbJobs = await prisma.agentJob.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { campaign: true },
+    });
+    return dbJobs;
+  } catch (err) {
+    return Array.from(mockJobs.values())
+      .sort((a, b) => {
+        const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
+        const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, limit);
+  }
+}
+
+/**
  * Retries a failed job by resetting its status and invoking the corresponding agent execution block once more.
  */
 export async function retryFailedJob(jobId: string): Promise<AgentOutput> {

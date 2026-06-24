@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import { runAgent, runAgentSequence, getAgentStatus, retryFailedJob } from "./src/lib/agents/orchestrator";
+import { runAgent, runAgentSequence, getAgentStatus, retryFailedJob, getAgentJobsList } from "./src/lib/agents/orchestrator";
 import { costTracker } from "./src/lib/openai";
 
 dotenv.config();
@@ -69,6 +69,16 @@ async function startServer() {
       res.json(results);
     } catch (error: any) {
       res.status(500).json({ error: error.message || "Failed to execute sequence" });
+    }
+  });
+
+  app.get("/api/agents/jobs", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const jobs = await getAgentJobsList(limit);
+      res.json(jobs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to fetch jobs list" });
     }
   });
 
