@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
@@ -28,7 +28,10 @@ import {
   Database,
   ArrowRight,
   Copy,
-  Check
+  Check,
+  MessageSquare,
+  Image,
+  Send
 } from "lucide-react";
 
 // Register metadata for the 12 specialized marketing agents
@@ -255,6 +258,21 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     prismaSaved: "Prisma GeneratedContent artifact saved as draft.",
     failedTitle: "❌ Generation Failed",
     runningLogs: "Orchestrator Sequence in Progress",
+    interactiveAdvisor: "AI Advisor Chat",
+    creativeStudio: "Visual Creative Studio",
+    chatbotDescription: "Consult with a professional marketing expert in real-time. Ask any marketing questions or request content optimizations.",
+    selectPersona: "Select Consultant Specialty Persona",
+    chatPlaceholder: "Type your marketing question here (e.g. how do I launch this brand voice?)...",
+    generatingVisuals: "Generating Visual Assets...",
+    creativeDescription: "Generate professional marketing assets and mockups for your campaign using AI.",
+    imagePromptPlaceholder: "Describe the image you want to generate (e.g., modern workspace background with warm lighting)...",
+    imageStyle: "Artistic Style",
+    imageRatio: "Aspect Ratio",
+    generateAsset: "Generate Marketing Visual Asset",
+    creativePortfolio: "Creative Portfolio History",
+    aiAssistantTitle: "Elite AI Marketing Advisor",
+    clearConversation: "Clear Chat",
+    send: "Send",
   },
   ar: {
     title: "ماركت هوب",
@@ -311,6 +329,21 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     prismaSaved: "تم حفظ عنصر المحتوى المولد كمسودة في قاعدة البيانات.",
     failedTitle: "❌ فشل التوليد",
     runningLogs: "سلسلة التنسيق قيد التنفيذ الآن",
+    interactiveAdvisor: "مستشار التسويق الذكي",
+    creativeStudio: "الاستوديو الإبداعي",
+    chatbotDescription: "استشر خبيراً تسويقياً متخصصاً في الوقت الفعلي. اطرح أي سؤال تسويقي أو اطلب مراجعة وتحسين للمحتوى.",
+    selectPersona: "اختر تخصص المستشار الرقمي",
+    chatPlaceholder: "اكتب سؤالك التسويقي هنا (مثال: كيف أطلق نبرة صوت هذه العلامة التجارية؟)...",
+    generatingVisuals: "جاري توليد الأصول البصرية...",
+    creativeDescription: "ولد صور تسويقية احترافية وتصميمات فريدة لحملاتك الإعلانية باستخدام الذكاء الاصطناعي.",
+    imagePromptPlaceholder: "صف الصورة التي ترغب في توليدها بالتفصيل (مثال: خلفية مكتب عمل حديث بإنارة دافئة)...",
+    imageStyle: "الأسلوب الفني",
+    imageRatio: "أبعاد الصورة",
+    generateAsset: "توليد الأصل البصري الإعلاني",
+    creativePortfolio: "معرض الصور والأصول الإبداعية",
+    aiAssistantTitle: "مستشار التسويق الرقمي النخبة",
+    clearConversation: "مسح المحادثة",
+    send: "إرسال",
   }
 };
 
@@ -430,6 +463,48 @@ const getStatusTranslation = (status: string, lang: "en" | "ar"): string => {
   return trans[status] || status;
 };
 
+const renderMarkdownSimple = (text: string) => {
+  return text.split("\n").map((line, idx) => {
+    // Headers
+    if (line.trim().startsWith("### ")) {
+      return <h4 key={idx} className="text-sm font-bold text-[#8F7E4F] mt-3 mb-1 font-serif">{line.replace("### ", "")}</h4>;
+    }
+    if (line.trim().startsWith("## ")) {
+      return <h3 key={idx} className="text-base font-bold text-slate-100 mt-4 mb-2 font-serif border-b border-white/5 pb-1">{line.replace("## ", "")}</h3>;
+    }
+    if (line.trim().startsWith("# ")) {
+      return <h2 key={idx} className="text-lg font-bold text-white mt-5 mb-2 font-serif">{line.replace("# ", "")}</h2>;
+    }
+    // Bullet lists
+    if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
+      return (
+        <ul key={idx} className="list-disc pl-5 mt-1 mb-1 text-slate-300">
+          <li className="text-xs">{line.replace(/^[-*]\s+/, "")}</li>
+        </ul>
+      );
+    }
+    // Numbered lists
+    if (/^\s*\d+\.\s/.test(line)) {
+      return (
+        <ol key={idx} className="list-decimal pl-5 mt-1 mb-1 text-slate-300">
+          <li className="text-xs">{line.replace(/^\s*\d+\.\s+/, "")}</li>
+        </ol>
+      );
+    }
+    // Code blocks/Quote blocks
+    if (line.trim().startsWith("> ")) {
+      return <blockquote key={idx} className="border-l-2 border-[#8F7E4F]/60 pl-3 italic text-slate-400 my-2 text-[11px] bg-white/5 py-1.5 rounded-sm">{line.replace("> ", "")}</blockquote>;
+    }
+    // Empty line
+    if (!line.trim()) {
+      return <div key={idx} className="h-2"></div>;
+    }
+    
+    // Default text line
+    return <p key={idx} className="text-xs text-slate-300 leading-relaxed mb-1.5">{line}</p>;
+  });
+};
+
 export default function App() {
   const [lang, setLang] = useState<"en" | "ar">(() => {
     const saved = localStorage.getItem("app_lang");
@@ -441,8 +516,36 @@ export default function App() {
     localStorage.setItem("app_lang", newLang);
   };
 
-  const [activeTab, setActiveTab] = useState<"single" | "pipeline" | "history">("single");
+  const [activeTab, setActiveTab] = useState<"single" | "pipeline" | "history" | "assistant" | "creative">("single");
   const [selectedAgentId, setSelectedAgentId] = useState("strategy");
+
+  // Chat Advisor State
+  const [chatPersona, setChatPersona] = useState("strategy");
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isSendingChat, setIsSendingChat] = useState(false);
+
+  // Creative Studio State
+  const [creativePrompt, setCreativePrompt] = useState("");
+  const [creativeStyle, setCreativeStyle] = useState("Cinematic");
+  const [creativeRatio, setCreativeRatio] = useState("16:9");
+  const [isGeneratingVisual, setIsGeneratingVisual] = useState(false);
+  const [generatedVisuals, setGeneratedVisuals] = useState<Array<{ url: string; prompt: string; style: string; ratio: string; createdAt: string }>>([
+    {
+      url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80",
+      prompt: "Digital marketing campaign dashboard on computer screen",
+      style: "Cinematic",
+      ratio: "16:9",
+      createdAt: new Date().toLocaleTimeString()
+    },
+    {
+      url: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=1200&q=80",
+      prompt: "Global user analytics map interface design",
+      style: "Corporate Minimal",
+      ratio: "4:3",
+      createdAt: new Date().toLocaleTimeString()
+    }
+  ]);
   
   // Single Agent state
   const [formInputs, setFormInputs] = useState<any>({});
@@ -480,6 +583,18 @@ export default function App() {
     setAgentOutput(null);
     setExecutionLogs([]);
   }, [selectedAgentId]);
+
+  // Seed initial welcome message on persona or language change
+  useEffect(() => {
+    setChatMessages([
+      {
+        role: "assistant",
+        content: lang === "ar"
+          ? `مرحباً بك! أنا مستشار الـ ${getAgentName(chatPersona, "ar")} الخاص بك. كيف يمكنني مساعدتك في صياغة استراتيجيتك اليوم؟`
+          : `Hello! I am your specialized ${getAgentName(chatPersona, "en")} advisor. How can I assist you with your marketing goals today?`
+      }
+    ]);
+  }, [chatPersona, lang]);
 
   // Sync metrics & history regularly
   const fetchMetricsAndHistory = async () => {
@@ -527,6 +642,90 @@ export default function App() {
       ...prev,
       [field]: value,
     }));
+  };
+
+  // Handle Chat message sending
+  const handleSendChatMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim() || isSendingChat) return;
+
+    const userMsg = { role: "user" as const, content: chatInput.trim() };
+    const updatedMessages = [...chatMessages, userMsg];
+    setChatMessages(updatedMessages);
+    setChatInput("");
+    setIsSendingChat(true);
+
+    try {
+      const res = await fetch("/api/agents/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          persona: getAgentName(chatPersona, "en"),
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          organizationId: "org-default",
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.content) {
+          setChatMessages([...updatedMessages, { role: "assistant", content: data.content }]);
+        } else {
+          setChatMessages([...updatedMessages, { role: "assistant", content: lang === "en" ? `Error: ${data.error || "Failed to generate response"}` : `خطأ: ${data.error || "فشل توليد الاستجابة"}` }]);
+        }
+      } else {
+        setChatMessages([...updatedMessages, { role: "assistant", content: lang === "en" ? "Error communicating with server" : "خطأ في الاتصال بالخادم" }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setChatMessages([...updatedMessages, { role: "assistant", content: lang === "en" ? "Network error occurred" : "حدث خطأ في الشبكة" }]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  // Handle visual asset generation
+  const handleGenerateVisualAsset = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!creativePrompt.trim() || isGeneratingVisual) return;
+
+    setIsGeneratingVisual(true);
+    try {
+      const res = await fetch("/api/agents/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: creativePrompt.trim(),
+          style: creativeStyle,
+          aspectRatio: creativeRatio,
+          organizationId: "org-default"
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.url) {
+          const newVisual = {
+            url: data.url,
+            prompt: creativePrompt.trim(),
+            style: creativeStyle,
+            ratio: creativeRatio,
+            createdAt: new Date().toLocaleTimeString()
+          };
+          setGeneratedVisuals([newVisual, ...generatedVisuals]);
+          setCreativePrompt("");
+        } else {
+          alert(lang === "en" ? `Error: ${data.error || "Failed"}` : `خطأ: ${data.error || "فشل"}`);
+        }
+      } else {
+        alert(lang === "en" ? "Server error during image generation" : "خطأ من الخادم أثناء توليد الصورة");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(lang === "en" ? "Network error" : "خطأ في الشبكة");
+    } finally {
+      setIsGeneratingVisual(false);
+    }
   };
 
   // Run a single agent
@@ -830,6 +1029,28 @@ export default function App() {
               }`}
             >
               {TRANSLATIONS[lang].jointCampaignPipeline}
+            </button>
+            <button
+              onClick={() => setActiveTab("assistant")}
+              className={`px-4 py-2 text-xs font-serif font-medium tracking-wide rounded-sm transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "assistant"
+                  ? "bg-[#8F7E4F] text-black shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <MessageSquare className="h-3 w-3" />
+              <span>{TRANSLATIONS[lang].interactiveAdvisor}</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("creative")}
+              className={`px-4 py-2 text-xs font-serif font-medium tracking-wide rounded-sm transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "creative"
+                  ? "bg-[#8F7E4F] text-black shadow-sm"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Image className="h-3 w-3" />
+              <span>{TRANSLATIONS[lang].creativeStudio}</span>
             </button>
             <button
               onClick={() => setActiveTab("history")}
@@ -1334,6 +1555,327 @@ export default function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab 4: Interactive Advisor Chat */}
+        {activeTab === "assistant" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-[600px]">
+            {/* Left selector for advisor persona */}
+            <div className="lg:col-span-4 bg-[#080808] border border-white/10 rounded-sm p-4 flex flex-col gap-3">
+              <div className="border-b border-white/10 pb-3">
+                <h3 className="text-sm font-serif font-medium tracking-wide text-[#8F7E4F] uppercase">
+                  {lang === "ar" ? "اختر المستشار الرقمي المتخصص" : "Select Specialty Advisor"}
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {lang === "ar" ? "كل مستشار تم تدريبه على نبرة وسياق عمل محدد" : "Each persona is tailored to specific goals and strategic insights."}
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto max-h-[500px] space-y-1.5 custom-scrollbar pr-1">
+                {AGENT_CATALOG.map((agent) => {
+                  const Icon = agent.icon;
+                  const isSelected = chatPersona === agent.id;
+                  return (
+                    <button
+                      key={agent.id}
+                      onClick={() => {
+                        setChatPersona(agent.id);
+                        // Reset chat messages for new persona
+                        setChatMessages([
+                          {
+                            role: "assistant",
+                            content: lang === "ar"
+                              ? `مرحباً بك! أنا مستشار الـ ${getAgentName(agent.id, "ar")} الخاص بك. كيف يمكنني مساعدتك في صياغة حملتك اليوم؟`
+                              : `Hello! I am your specialized ${getAgentName(agent.id, "en")} advisor. How can I assist you with your marketing goals today?`
+                          }
+                        ]);
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 text-start rounded-sm border transition-all duration-150 cursor-pointer ${
+                        isSelected
+                          ? "bg-[#8F7E4F]/10 border-[#8F7E4F] text-white"
+                          : "bg-white/2 border-white/5 hover:border-white/10 text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <div className={`p-1.5 rounded-sm ${isSelected ? "bg-[#8F7E4F] text-black" : "bg-white/5 text-[#8F7E4F]"}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold font-serif truncate">{getAgentName(agent.id, lang)}</h4>
+                        <p className="text-[10px] opacity-60 truncate">{getAgentDesc(agent.id, lang)}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right Chat Area */}
+            <div className="lg:col-span-8 bg-[#080808] border border-white/10 rounded-sm flex flex-col h-[600px]">
+              {/* Advisor Header */}
+              <div className="bg-[#0c0c0c] px-6 py-4 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#8F7E4F]/10 text-[#8F7E4F] rounded-sm">
+                    {(() => {
+                      const CurrentIcon = AGENT_CATALOG.find((a) => a.id === chatPersona)?.icon || Brain;
+                      return <CurrentIcon className="h-5 w-5" />;
+                    })()}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-serif font-medium text-slate-200">
+                      {getAgentName(chatPersona, lang)}
+                    </h3>
+                    <p className="text-[10px] text-[#8F7E4F] uppercase tracking-wider font-mono">
+                      {lang === "ar" ? "استشارة تفاعلية فورية" : "Interactive Growth Consultation"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setChatMessages([
+                      {
+                        role: "assistant",
+                        content: lang === "ar"
+                          ? `أهلاً بك مجدداً! كيف يمكنني خدمتك اليوم في تخصص الـ ${getAgentName(chatPersona, "ar")}؟`
+                          : `Welcome back! How can I help you today as your specialized ${getAgentName(chatPersona, "en")}?`
+                      }
+                    ]);
+                  }}
+                  className="px-3 py-1.5 text-[10px] border border-white/10 hover:border-white/20 text-slate-400 hover:text-slate-200 rounded-sm font-mono cursor-pointer transition-all"
+                >
+                  {TRANSLATIONS[lang].clearConversation}
+                </button>
+              </div>
+
+              {/* Chat Stream Area */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-[#050505]">
+                {chatMessages.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                    <MessageSquare className="h-10 w-10 text-slate-700 mb-2 animate-bounce" />
+                    <p className="text-xs text-slate-500 font-mono">
+                      {lang === "ar" ? "ابدأ المحادثة الاستشارية أدناه" : "Initiate your advisory chat session below"}
+                    </p>
+                  </div>
+                )}
+
+                {chatMessages.map((msg, index) => {
+                  const isUser = msg.role === "user";
+                  return (
+                    <div
+                      key={index}
+                      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-sm px-4 py-3 shadow-md border ${
+                          isUser
+                            ? "bg-[#8F7E4F]/10 border-[#8F7E4F]/30 text-slate-100"
+                            : "bg-[#0c0c0c] border-white/5 text-slate-200"
+                        }`}
+                      >
+                        <div className="text-[9px] font-mono opacity-40 mb-1">
+                          {isUser ? (lang === "ar" ? "أنت" : "YOU") : getAgentName(chatPersona, lang).toUpperCase()}
+                        </div>
+                        <div className="text-xs space-y-1.5 break-words">
+                          {isUser ? <p className="text-xs text-slate-200">{msg.content}</p> : renderMarkdownSimple(msg.content)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {isSendingChat && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-sm px-4 py-3 bg-[#0c0c0c] border border-white/5 text-slate-200">
+                      <div className="text-[9px] font-mono opacity-40 mb-1 uppercase text-[#8F7E4F]">
+                        {getAgentName(chatPersona, lang).toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin text-[#8F7E4F]" />
+                        <span>{lang === "ar" ? "جاري التفكير والتوليد..." : "Consultant is brainstorming..."}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Quick Prompts */}
+              <div className="px-6 py-2.5 bg-[#0a0a0a] border-t border-white/5 flex gap-2 overflow-x-auto max-w-full scrollbar-none">
+                {[
+                  lang === "ar" ? "صغ خطة تسويق سريعة لمنتجي" : "Draft a fast strategy layout",
+                  lang === "ar" ? "ما هي أكثر الكلمات المفتاحية قيمة؟" : "What keywords fit product organic growth?",
+                  lang === "ar" ? "اكتب صيغة إعلانية جذابة جداً" : "Write a high-converting landing copy",
+                  lang === "ar" ? "اقترح أفكار منشورات فيسبوك فيروسية" : "Suggest 3 viral LinkedIn hooks",
+                ].map((promptText, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setChatInput(promptText)}
+                    className="flex-shrink-0 text-[10px] px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-sm text-slate-300 transition-all cursor-pointer"
+                  >
+                    {promptText}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chat Input form */}
+              <form onSubmit={handleSendChatMessage} className="p-4 bg-[#0c0c0c] border-t border-white/10 flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder={TRANSLATIONS[lang].chatPlaceholder}
+                  disabled={isSendingChat}
+                  className="flex-1 bg-black/40 border border-white/10 rounded-sm px-4 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-[#8F7E4F]/60 transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!chatInput.trim() || isSendingChat}
+                  className="px-4 py-2 bg-[#8F7E4F] hover:bg-[#a6955f] disabled:bg-white/10 text-black disabled:text-slate-400 rounded-sm flex items-center justify-center cursor-pointer transition-all"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: AI Creative Studio */}
+        {activeTab === "creative" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+            {/* Control Panel */}
+            <div className="lg:col-span-4 bg-[#080808] border border-white/10 rounded-sm p-6 space-y-5">
+              <div>
+                <h3 className="text-sm font-serif font-medium tracking-wide text-slate-200">
+                  {lang === "ar" ? "الاستوديو الإبداعي الذكي" : "Creative Asset Generator"}
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-1 leading-normal">
+                  {TRANSLATIONS[lang].creativeDescription}
+                </p>
+              </div>
+
+              <form onSubmit={handleGenerateVisualAsset} className="space-y-4">
+                {/* Visual Prompt Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-mono font-bold block">
+                    {lang === "ar" ? "وصف التوجيه الإبداعي للبصريات" : "Visual Direction Prompt"}
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={creativePrompt}
+                    onChange={(e) => setCreativePrompt(e.target.value)}
+                    placeholder={TRANSLATIONS[lang].imagePromptPlaceholder}
+                    className="w-full bg-black/40 border border-white/10 rounded-sm p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-[#8F7E4F]/60 transition-all resize-none"
+                  />
+                </div>
+
+                {/* Art Style Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-mono font-bold block">
+                    {TRANSLATIONS[lang].imageStyle}
+                  </label>
+                  <select
+                    value={creativeStyle}
+                    onChange={(e) => setCreativeStyle(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-sm px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-[#8F7E4F]/60"
+                  >
+                    <option value="Cinematic">Cinematic Lighting & Shadow</option>
+                    <option value="Minimalist Corporate">Minimalist Corporate Presentation</option>
+                    <option value="Neon Cyberpunk">Neon Cyberpunk Tech</option>
+                    <option value="Vector Illustration">Flat Vector Illustration</option>
+                    <option value="3D Studio Render">3D Clay/Studio Render</option>
+                    <option value="Watercolor Art">Warm Watercolor Editorial</option>
+                  </select>
+                </div>
+
+                {/* Aspect Ratio Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-mono font-bold block">
+                    {TRANSLATIONS[lang].imageRatio}
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {["16:9", "1:1", "4:3", "9:16"].map((ratio) => (
+                      <button
+                        key={ratio}
+                        type="button"
+                        onClick={() => setCreativeRatio(ratio)}
+                        className={`py-1.5 text-center text-[10px] rounded-sm border font-mono transition-all cursor-pointer ${
+                          creativeRatio === ratio
+                            ? "bg-[#8F7E4F] border-[#8F7E4F] text-black font-bold"
+                            : "bg-black/20 border-white/10 hover:border-white/20 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        {ratio}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  type="submit"
+                  disabled={!creativePrompt.trim() || isGeneratingVisual}
+                  className="w-full py-3 bg-[#8F7E4F] hover:bg-[#a6955f] disabled:bg-white/5 text-black disabled:text-slate-500 font-serif font-medium text-xs rounded-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                >
+                  {isGeneratingVisual ? (
+                    <>
+                      <RefreshCw className="h-4.5 w-4.5 animate-spin" />
+                      <span>{TRANSLATIONS[lang].generatingVisuals}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      <span>{TRANSLATIONS[lang].generateAsset}</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Visual Portfolio Gallery */}
+            <div className="lg:col-span-8 bg-[#080808] border border-white/10 rounded-sm p-6 flex flex-col gap-4">
+              <div>
+                <h3 className="text-xs font-serif tracking-wider uppercase text-slate-400 font-medium">
+                  {TRANSLATIONS[lang].creativePortfolio}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto max-h-[500px] pr-1 custom-scrollbar">
+                {generatedVisuals.map((visual, idx) => (
+                  <div key={idx} className="bg-[#0c0c0c] border border-white/10 rounded-sm overflow-hidden group shadow-lg hover:border-white/20 transition-all duration-200">
+                    <div className="relative overflow-hidden bg-black aspect-video flex items-center justify-center">
+                      <img
+                        src={visual.url}
+                        alt={visual.prompt}
+                        referrerPolicy="no-referrer"
+                        className="object-cover w-full h-full group-hover:scale-105 transition-all duration-300"
+                      />
+                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 text-[9px] font-mono text-slate-300 rounded-sm border border-white/10">
+                        {visual.ratio}
+                      </div>
+                      <div className="absolute top-2 right-2 bg-[#8F7E4F] px-2 py-0.5 text-[9px] font-bold text-black rounded-sm uppercase tracking-wide">
+                        {visual.style}
+                      </div>
+                    </div>
+                    <div className="p-3.5 space-y-2">
+                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans italic">
+                        "{visual.prompt}"
+                      </p>
+                      <div className="flex items-center justify-between border-t border-white/5 pt-2.5">
+                        <span className="text-[9px] text-slate-500 font-mono">{visual.createdAt}</span>
+                        <button
+                          onClick={() => copyToClipboard(visual.url)}
+                          className="text-[9px] text-[#8F7E4F] hover:text-[#a6955f] cursor-pointer font-mono flex items-center gap-1 border border-[#8F7E4F]/20 hover:border-[#8F7E4F]/40 px-2 py-0.5 rounded-sm"
+                        >
+                          <Copy className="h-2.5 w-2.5" />
+                          <span>{lang === "ar" ? "نسخ الرابط" : "Copy Asset URL"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

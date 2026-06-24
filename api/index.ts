@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import { runAgent, runAgentSequence, getAgentStatus, retryFailedJob, getAgentJobsList } from "../src/lib/agents/orchestrator";
-import { costTracker } from "../src/lib/openai";
+import { costTracker, generateCompletion, generateImage } from "../src/lib/openai";
 
 dotenv.config();
 
@@ -100,6 +100,61 @@ app.post("/api/agents/jobs/:id/retry", async (req, res) => {
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to retry job" });
+  }
+});
+
+app.post("/api/agents/chat", async (req, res) => {
+  try {
+    const { persona, messages, organizationId } = req.body;
+    if (!persona || !messages || !Array.isArray(messages) || !organizationId) {
+      return res.status(400).json({ error: "Missing required fields (persona, messages, organizationId)" });
+    }
+
+    console.log(`[API] Interactive Chat with Persona "${persona}" for Org ${organizationId}`);
+    
+    const systemPrompt = `You are the ultimate AI Marketing Consultant specialized as "${persona}". 
+Your goal is to provide expert, elite, highly actionable, and professional marketing feedback, optimization strategies, and brainstorm ideas based on user questions.
+You MUST respond in the language of the user's message (support Arabic and English natively). Keep responses structured, concise, and professional with markdown.`;
+
+    const formattedMessages = [
+      { role: "system" as const, content: systemPrompt },
+      ...messages.map((m: any) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content
+      }))
+    ];
+
+    const result = await generateCompletion({
+      organizationId,
+      messages: formattedMessages,
+      temperature: 0.7,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to execute advisor chat" });
+  }
+});
+
+app.post("/api/agents/generate-image", async (req, res) => {
+  try {
+    const { prompt, style, aspectRatio, organizationId } = req.body;
+    if (!prompt || !style || !aspectRatio || !organizationId) {
+      return res.status(400).json({ error: "Missing required fields (prompt, style, aspectRatio, organizationId)" });
+    }
+
+    console.log(`[API] Generating visual asset with theme "${prompt}" for Org ${organizationId}`);
+
+    const result = await generateImage({
+      organizationId,
+      prompt,
+      style,
+      aspectRatio,
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to generate image" });
   }
 });
 

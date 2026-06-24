@@ -9,3 +9,5 @@ coverage/
 git_push.ts
 git_sync.ts
 git_sync.js
+git_sync_final.ts
+git_sync_final.js
