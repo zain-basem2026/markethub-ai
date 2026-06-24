@@ -1,0 +1,6 @@
+{
+  "name": "Multi-Agent AI Marketing Platform",
+  "description": "A collaborative orchestration workspace powered by 12 specialized AI agents to generate strategies, SEO audits, copy briefs, competitor intelligence, and direct-response content.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

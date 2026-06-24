@@ -1,0 +1,57 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Campaign {
+  id                String             @id @default(cuid())
+  name              String
+  description       String?
+  status            String             @default("active")
+  organizationId    String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  agentJobs         AgentJob[]
+  generatedContents GeneratedContent[]
+
+  @@index([organizationId])
+}
+
+model AgentJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  agentType       String
+  status          String   @default("pending")
+  input           String
+  output          String?
+  error           String?
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id])
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+  @@index([organizationId])
+  @@index([agentType])
+  @@index([status])
+}
+
+model GeneratedContent {
+  id              String   @id @default(cuid())
+  organizationId  String
+  agentType       String
+  contentType     String
+  title           String
+  body            String   @db.Text
+  metadata        String?
+  status          String   @default("draft")
+  campaignId      String?
+  campaign        Campaign? @relation(fields: [campaignId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([organizationId])
+  @@index([contentType])
+  @@index([campaignId])
+}
